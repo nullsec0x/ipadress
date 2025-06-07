@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>IP Lookup Tool</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      background-color: #1e1e1e;
+      color: #00ff00;
+      font-family: 'Courier New', monospace;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      padding: 2rem;
+      line-height: 1.6;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 800px;
+      background-color: #000;
+      border-radius: 10px;
+      /* box-shadow: 0 0 15px rgba(0, 255, 0, 0.1); */
+      padding: 2rem;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .container::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 30px;
+      background-color: #111;
+      border-radius: 10px 10px 0 0;
+    }
+
+    .title {
+      text-align: center;
+      margin-bottom: 2rem;
+      font-size: 1.5rem;
+      color: #00ff00;
+      text-shadow: 0 0 5px rgba(0, 255, 0, 0.3);
+    }
+
+    .ip-form {
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    label {
+      font-size: 1rem;
+      color: #00ff00;
+    }
+
+    .input-wrapper {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+
+    .input-prompt {
+      color: #aaa;
+      margin-right: 0.5rem;
+      white-space: nowrap;
+    }
+
+    input {
+      background: transparent;
+      border: none;
+      border-bottom: 1px solid #00ff00;
+      color: #00ff00;
+      outline: none;
+      font-family: 'Courier New', monospace;
+      font-size: 1rem;
+      padding: 0.5rem 0;
+      flex: 1;
+      caret-color: #00ff00;
+    }
+
+    input::placeholder {
+      color: #555;
+    }
+
+    .blinker {
+      width: 8px;
+      height: 1.2rem;
+      background: #00ff00;
+      animation: blink 1s steps(1) infinite;
+      margin-left: 5px;
+    }
+
+    button {
+      background-color: #003300;
+      color: #00ff00;
+      border: 1px solid #00aa00;
+      border-radius: 5px;
+      padding: 0.75rem 1.5rem;
+      font-family: 'Courier New', monospace;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: all 0.2s;
+      margin-top: 1rem;
+      align-self: flex-start;
+    }
+
+    button:hover {
+      background-color: #005500;
+      box-shadow: 0 0 10px rgba(0, 255, 0, 0.3);
+    }
+
+    button:active {
+      background-color: #002200;
+    }
+
+    .result {
+      margin-top: 2rem;
+      padding: 1.5rem;
+      background-color: #111;
+      border-radius: 5px;
+      border-left: 3px solid #00ff00;
+      display: none;
+    }
+
+    .result-title {
+      color: #00ff00;
+      margin-bottom: 1rem;
+      font-size: 1.2rem;
+    }
+
+    .result-content {
+      font-family: monospace;
+      white-space: pre;
+      overflow-x: auto;
+    }
+
+    .loading {
+      display: none;
+      margin-top: 1rem;
+      color: #00ff00;
+    }
+
+    .loading::after {
+      content: "...";
+      animation: dots 1.5s steps(5, end) infinite;
+    }
+
+    @keyframes blink {
+      0%, 50% { opacity: 1; }
+      51%, 100% { opacity: 0; }
+    }
+
+    @keyframes dots {
+      0%, 20% { content: "."; }
+      40% { content: ".."; }
+      60%, 100% { content: "..."; }
+    }
+
+    .error {
+      color: #ff5555;
+      margin-top: 1rem;
+      display: none;
+    }
+
+    @media (max-width: 768px) {
+      body {
+        padding: 1rem;
+      }
+      
+      .container {
+        padding: 1.5rem;
+      }
+      
+      .title {
+        font-size: 1.2rem;
+      }
+      
+      input {
+        font-size: 0.9rem;
+      }
+      
+      button {
+        width: 100%;
+      }
+    }
+
+    .scanlines {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: linear-gradient(
+        rgba(18, 16, 16, 0) 50%, 
+        rgba(0, 0, 0, 0.25) 50%
+      );
+      background-size: 100% 2px;
+      pointer-events: none;
+      z-index: 10;
+      border-radius: 10px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="scanlines"></div>
+    <h1 class="title">What Is My IP Adress?</h1>
+    
+    <div class="ip-form">
+      <div class="form-group">
+        <label>Check your current IP information:</label>
+        <div class="input-wrapper">
+          <span class="input-prompt">~$</span>
+          <input type="text" id="ip-input" placeholder="Press the button below to lookup your IP" readonly>
+          <span class="blinker"></span>
+        </div>
+      </div>
+      
+      <button id="lookup-btn">LOOKUP IP</button>
+      
+      <div class="loading" id="loading">Fetching IP data</div>
+      <div class="error" id="error"></div>
+    </div>
+    
+    <div class="result" id="result">
+      <h2 class="result-title">IP INFORMATION</h2>
+      <div class="result-content" id="result-content"></div>
+    </div>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const lookupBtn = document.getElementById('lookup-btn');
+      const ipInput = document.getElementById('ip-input');
+      const result = document.getElementById('result');
+      const resultContent = document.getElementById('result-content');
+      const loading = document.getElementById('loading');
+      const error = document.getElementById('error');
+      
+      lookupBtn.addEventListener('click', async () => {
+        // Reset UI
+        result.style.display = 'none';
+        error.style.display = 'none';
+        loading.style.display = 'block';
+        
+        try {
+          const response = await fetch('https://api.myip.com');
+          const data = await response.json();
+          
+          resultContent.textContent = JSON.stringify(data, null, 2);
+          
+          setTimeout(() => {
+            resultContent.innerHTML = `
+              <div><span style="color: #aaa;">IP:</span> ${data.ip}</div>
+              <div><span style="color: #aaa;">Country:</span> ${data.country}</div>
+              <div><span style="color: #aaa;">Country Code:</span> ${data.cc}</div>
+            `;
+          }, 500);
+          
+          ipInput.value = data.ip;
+          result.style.display = 'block';
+        } catch (err) {
+          error.textContent = `Error: ${err.message}`;
+          error.style.display = 'block';
+        } finally {
+          loading.style.display = 'none';
+        }
+      });
+      
+      lookupBtn.focus();
+    });
+  </script>
+</body>
+</html>
