@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>IP Lookup Tool</title>
+  <title>What Is My IP Adress?</title>
   <style>
     * {
       margin: 0;
@@ -29,7 +29,6 @@
       max-width: 800px;
       background-color: #000;
       border-radius: 10px;
-      /* box-shadow: 0 0 15px rgba(0, 255, 0, 0.1); */
       padding: 2rem;
       position: relative;
       overflow: hidden;
@@ -144,12 +143,36 @@
       color: #00ff00;
       margin-bottom: 1rem;
       font-size: 1.2rem;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .result-title::after {
+      content: "";
+      flex: 1;
+      height: 1px;
+      background: #333;
     }
 
     .result-content {
       font-family: monospace;
-      white-space: pre;
-      overflow-x: auto;
+    }
+
+    .data-row {
+      display: flex;
+      margin-bottom: 0.5rem;
+      line-height: 1.5;
+    }
+
+    .data-label {
+      color: #aaa;
+      min-width: 120px;
+    }
+
+    .data-value {
+      color: #00ff00;
+      word-break: break-all;
     }
 
     .loading {
@@ -180,6 +203,76 @@
       display: none;
     }
 
+    .copy-btn {
+      background: none;
+      border: none;
+      color: #00ff00;
+      cursor: pointer;
+      margin-left: 10px;
+      font-size: 0.9rem;
+      padding: 0.2rem 0.5rem;
+      border-radius: 3px;
+    }
+
+    .copy-btn:hover {
+      background-color: #005500;
+    }
+
+    .map-container {
+      margin-top: 1.5rem;
+      height: 250px;
+      border: 1px solid #00ff00;
+      border-radius: 5px;
+      overflow: hidden;
+    }
+
+    .map-placeholder {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      color: #aaa;
+      background-color: #0a0a0a;
+    }
+
+    .ip-display {
+      display: flex;
+      align-items: center;
+      margin-bottom: 1rem;
+      padding: 0.5rem;
+      background-color: #111;
+      border-radius: 5px;
+    }
+
+    .ip-value {
+      font-family: monospace;
+      font-size: 1.2rem;
+      color: #00ff00;
+    }
+
+    .terminal-prompt {
+      display: flex;
+      align-items: center;
+      margin-bottom: 1rem;
+      background-color: #111;
+      border-radius: 5px;
+      padding: 0.8rem;
+    }
+
+    .prompt-text {
+      font-family: monospace;
+      color: #00ff00;
+    }
+
+    .typing-cursor {
+      display: inline-block;
+      width: 8px;
+      height: 1.2rem;
+      background: #00ff00;
+      animation: blink 1s steps(1) infinite;
+      margin-left: 2px;
+    }
+
     @media (max-width: 768px) {
       body {
         padding: 1rem;
@@ -199,6 +292,19 @@
       
       button {
         width: 100%;
+      }
+      
+      .data-row {
+        flex-direction: column;
+        gap: 0.2rem;
+      }
+      
+      .data-label {
+        min-width: auto;
+      }
+
+      .map-container {
+        height: 200px;
       }
     }
 
@@ -224,61 +330,246 @@
     <div class="scanlines"></div>
     <h1 class="title">What Is My IP Adress?</h1>
     
+    <div class="terminal-prompt" id="terminal-prompt">
+      <span class="input-prompt">~$</span>
+      <span class="prompt-text" id="typing-text"></span>
+      <span class="typing-cursor" id="typing-cursor"></span>
+    </div>
+    
+    <div class="ip-display" id="ip-display" style="display: none;">
+      <span class="ip-value" id="ip-value"></span>
+      <button class="copy-btn" id="copy-btn" title="Copy to clipboard">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#00ff00" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+          <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+        </svg>
+      </button>
+    </div>
+    
     <div class="ip-form">
-      <div class="form-group">
-        <label>Check your current IP information:</label>
-        <div class="input-wrapper">
-          <span class="input-prompt">~$</span>
-          <input type="text" id="ip-input" placeholder="Press the button below to lookup your IP" readonly>
-          <span class="blinker"></span>
-        </div>
-      </div>
+      <button id="lookup-btn">SCAN NETWORK</button>
       
-      <button id="lookup-btn">LOOKUP IP</button>
-      
-      <div class="loading" id="loading">Fetching IP data</div>
+      <div class="loading" id="loading">Accessing secure databases...</div>
       <div class="error" id="error"></div>
     </div>
     
     <div class="result" id="result">
-      <h2 class="result-title">IP INFORMATION</h2>
+      <h2 class="result-title">SYSTEM INFORMATION</h2>
       <div class="result-content" id="result-content"></div>
+      
+      <div class="map-container" id="map-container">
+        <div class="map-placeholder">[Geolocation data pending]</div>
+      </div>
     </div>
   </div>
 
   <script>
     document.addEventListener('DOMContentLoaded', () => {
       const lookupBtn = document.getElementById('lookup-btn');
-      const ipInput = document.getElementById('ip-input');
+      const ipValue = document.getElementById('ip-value');
+      const copyBtn = document.getElementById('copy-btn');
       const result = document.getElementById('result');
       const resultContent = document.getElementById('result-content');
       const loading = document.getElementById('loading');
       const error = document.getElementById('error');
+      const mapContainer = document.getElementById('map-container');
+      const terminalPrompt = document.getElementById('terminal-prompt');
+      const typingText = document.getElementById('typing-text');
+      const typingCursor = document.getElementById('typing-cursor');
+      const ipDisplay = document.getElementById('ip-display');
+      
+      const messages = [
+        "Initializing network reconnaissance...",
+        "Establishing secure connection...",
+        "Preparing IP scanning protocols...",
+        "Ready for network analysis..."
+      ];
+      
+      let messageIndex = 0;
+      let charIndex = 0;
+      let isDeleting = false;
+      let typingTimeout;
+      
+      function typeText() {
+        const currentMessage = messages[messageIndex];
+        
+        if (isDeleting) {
+          typingText.textContent = currentMessage.substring(0, charIndex - 1);
+          charIndex--;
+        } else {
+          typingText.textContent = currentMessage.substring(0, charIndex + 1);
+          charIndex++;
+        }
+        
+        if (!isDeleting && charIndex === currentMessage.length) {
+          isDeleting = true;
+          typingTimeout = setTimeout(typeText, 1500);
+        } else if (isDeleting && charIndex === 0) {
+          isDeleting = false;
+          messageIndex = (messageIndex + 1) % messages.length;
+          typingTimeout = setTimeout(typeText, 300);
+        } else {
+          const speed = isDeleting ? 50 : 100;
+          typingTimeout = setTimeout(typeText, speed);
+        }
+      }
+      
+      typeText();
+      
+      const API_ENDPOINTS = [
+        'https://ipapi.co/json/',
+        'https://ipwho.is/',
+        'https://api.ipgeolocation.io/ipgeo?apiKey=free',
+        'https://freeipapi.com/api/json'
+      ];
+      
+      async function fetchIPData() {
+        let lastError = null;
+        
+        for (const endpoint of API_ENDPOINTS) {
+          try {
+            const response = await fetch(endpoint, {
+              headers: {
+                'Accept': 'application/json'
+              }
+            });
+            
+            if (!response.ok) throw new Error(`API responded with ${response.status}`);
+            const data = await response.json();
+            
+            return {
+              ip: data.ip || data.query,
+              city: data.city || 'Unknown',
+              region: data.region || data.regionName || data.state_prov || 'Unknown',
+              country: data.country || data.countryCode || 'Unknown',
+              country_name: data.country_name || data.country || 'Unknown',
+              postal: data.postal || data.zip || 'Unknown',
+              timezone: data.timezone || data.time_zone?.name || 'Unknown',
+              isp: data.isp || data.connection?.isp || data.org || 'Unknown',
+              asn: data.asn || data.connection?.asn || 'Unknown',
+              latitude: data.latitude || data.lat || 'Unknown',
+              longitude: data.longitude || data.lon || 'Unknown',
+              currency: data.currency || data.currency_code || 'Unknown',
+              languages: data.languages || 'Unknown',
+              proxy: data.proxy || data.security?.is_proxy || 'Unknown',
+              hosting: data.hosting || data.security?.is_hosting || 'Unknown'
+            };
+          } catch (err) {
+            lastError = err;
+            console.log(`Failed to fetch from ${endpoint}:`, err);
+          }
+        }
+        
+        throw lastError || new Error('All IP APIs failed');
+      }
+      
+      function showMap(lat, lon) {
+        if (lat === 'Unknown' || lon === 'Unknown') {
+          mapContainer.innerHTML = '<div class="map-placeholder">[Geolocation data unavailable]</div>';
+          return;
+        }
+        
+        mapContainer.innerHTML = `<iframe width="100%" height="100%" frameborder="0" scrolling="no" marginheight="0" marginwidth="0" 
+          src="https://www.openstreetmap.org/export/embed.html?bbox=${parseFloat(lon)-0.1}%2C${parseFloat(lat)-0.1}%2C${parseFloat(lon)+0.1}%2C${parseFloat(lat)+0.1}&amp;layer=mapnik&amp;marker=${lat}%2C${lon}" 
+          style="border: 1px solid #00ff00"></iframe>`;
+      }
+      
+      copyBtn.addEventListener('click', () => {
+        const ip = ipValue.textContent;
+        if (ip) {
+          navigator.clipboard.writeText(ip).then(() => {
+            const originalText = copyBtn.innerHTML;
+            copyBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#00ff00" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>';
+            setTimeout(() => {
+              copyBtn.innerHTML = originalText;
+            }, 2000);
+          });
+        }
+      });
       
       lookupBtn.addEventListener('click', async () => {
-        // Reset UI
+        clearTimeout(typingTimeout);
+        typingCursor.style.display = 'none';
+        
+        terminalPrompt.style.display = 'none';
+        ipDisplay.style.display = 'flex';
         result.style.display = 'none';
         error.style.display = 'none';
         loading.style.display = 'block';
         
         try {
-          const response = await fetch('https://api.myip.com');
-          const data = await response.json();
+          const data = await fetchIPData();
           
-          resultContent.textContent = JSON.stringify(data, null, 2);
+          ipValue.textContent = data.ip;
           
-          setTimeout(() => {
-            resultContent.innerHTML = `
-              <div><span style="color: #aaa;">IP:</span> ${data.ip}</div>
-              <div><span style="color: #aaa;">Country:</span> ${data.country}</div>
-              <div><span style="color: #aaa;">Country Code:</span> ${data.cc}</div>
-            `;
-          }, 500);
+          let htmlContent = '';
           
-          ipInput.value = data.ip;
+          htmlContent += `
+            <div class="data-row">
+              <div class="data-label">Location:</div>
+              <div class="data-value">
+                ${data.city !== 'Unknown' ? data.city + ', ' : ''}
+                ${data.region !== 'Unknown' ? data.region + ', ' : ''}
+                ${data.country_name !== 'Unknown' ? data.country_name : ''}
+                ${data.postal !== 'Unknown' ? ' (' + data.postal + ')' : ''}
+              </div>
+            </div>
+          `;
+          
+          htmlContent += `
+            <div class="data-row">
+              <div class="data-label">ISP:</div>
+              <div class="data-value">${data.isp}</div>
+            </div>
+            <div class="data-row">
+              <div class="data-label">ASN:</div>
+              <div class="data-value">${data.asn}</div>
+            </div>
+          `;
+          
+          htmlContent += `
+            <div class="data-row">
+              <div class="data-label">Timezone:</div>
+              <div class="data-value">${data.timezone}</div>
+            </div>
+            <div class="data-row">
+              <div class="data-label">Coordinates:</div>
+              <div class="data-value">
+                ${data.latitude !== 'Unknown' && data.longitude !== 'Unknown' ? 
+                  `${data.latitude}, ${data.longitude}` : 'Unknown'}
+              </div>
+            </div>
+            <div class="data-row">
+              <div class="data-label">Currency:</div>
+              <div class="data-value">${data.currency}</div>
+            </div>
+          `;
+          
+          htmlContent += `
+            <div class="data-row">
+              <div class="data-label">Proxy/VPN:</div>
+              <div class="data-value">${data.proxy === true ? 'Detected' : data.proxy === false ? 'Not detected' : 'Unknown'}</div>
+            </div>
+            <div class="data-row">
+              <div class="data-label">Hosting:</div>
+              <div class="data-value">${data.hosting === true ? 'Detected' : data.hosting === false ? 'Not detected' : 'Unknown'}</div>
+            </div>
+          `;
+          
+          resultContent.innerHTML = htmlContent;
           result.style.display = 'block';
+          
+          if (data.latitude !== 'Unknown' && data.longitude !== 'Unknown') {
+            showMap(data.latitude, data.longitude);
+          } else {
+            mapContainer.innerHTML = '<div class="map-placeholder">[Geolocation data unavailable]</div>';
+          }
         } catch (err) {
-          error.textContent = `Error: ${err.message}`;
+          error.textContent = `ERROR: Network scan failed. Possible causes:
+- Connection to secure servers blocked
+- Firewall interference
+- Protocol mismatch
+- Try refreshing with HTTPS`;
           error.style.display = 'block';
         } finally {
           loading.style.display = 'none';
